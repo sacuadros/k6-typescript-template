@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+     "module": "ESNext", // Usa el estándar de módulos ES más reciente
+    "target": "ES2018", // Objetivo de compilación compatible con tu configuración de esbuild
+    "moduleResolution": "node", // Resolución de módulos al estilo de Node.js
+    "outDir": "./dist", // Directorio de salida para los archivos compilados
+    "rootDir": "./src", // Directorio raíz de los archivos fuente
+    "strict": true, // Habilita todas las opciones estrictas de tipo
+    "esModuleInterop": true, // Permite la interoperabilidad de importación/exportación de ES Modules
+    "forceConsistentCasingInFileNames": true, // Asegura que el caso de los nombres de archivo sea consistente
+    "skipLibCheck": true, // Omite la comprobación de tipos en archivos de declaración de todas las bibliotecas
+    "resolveJsonModule": true, // Permite la importación de módulos JSON
+    "baseUrl": ".", // Base para la resolución de módulos no relativos
+  
+  },
+  "include": ["src/**/*"]
+}

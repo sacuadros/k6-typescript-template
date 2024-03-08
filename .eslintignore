@@ -1,0 +1,18 @@
+# Dist folder
+/dist
+
+# Node modules
+node_modules
+
+# Volumes
+/postgres_info
+/sonarqube
+
+# Git
+.git
+
+# Testing
+/coverage
+
+# External services
+/kafka/data
