@@ -2,7 +2,7 @@
   "name": "k6-typescript-template",
   "version": "1.0.0",
   "private": true,
-  "description": "Minimal TypeScript starter for reliable k6 load tests.",
+  "description": "Opinionated starter for safe, continuous API performance testing with k6.",
   "license": "Apache-2.0",
   "author": "Sergio Cuadros",
   "repository": {
@@ -11,8 +11,11 @@
   },
   "keywords": [
     "k6",
+    "continuous-testing",
     "load-testing",
+    "opentelemetry",
     "performance-testing",
+    "slo",
     "typescript"
   ],
   "engines": {
@@ -23,8 +26,10 @@
     "format": "prettier . --write",
     "format:check": "prettier . --check",
     "test": "npm run check",
-    "test:inspect": "k6 inspect src/smoke.ts",
-    "test:smoke": "k6 run src/smoke.ts",
+    "test:average-load": "k6 run src/tests/average-load.ts",
+    "test:inspect": "k6 inspect src/tests/smoke.ts && k6 inspect -e AUTH_SECRET_NAME=auth-token src/tests/authenticated-smoke.ts && k6 inspect -e BASE_URL=https://example.invalid -e ENVIRONMENT=staging -e ALLOW_LOAD_TEST=true src/tests/average-load.ts && k6 inspect -e BASE_URL=https://example.invalid -e ENVIRONMENT=staging -e ALLOW_LOAD_TEST=true src/tests/stress.ts",
+    "test:smoke": "k6 run src/tests/smoke.ts",
+    "test:stress": "k6 run src/tests/stress.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

@@ -37,3 +37,42 @@ jobs:
 
       - name: Run checks
         run: npm run check
+
+      - name: Verify load profiles fail closed
+        run: |
+          if k6 inspect \
+            -e BASE_URL=ftp://example.invalid \
+            src/tests/smoke.ts >/dev/null 2>&1; then
+            echo "smoke accepted a non-HTTP target"
+            exit 1
+          fi
+
+          if k6 inspect \
+            -e TEST_ID="unbounded tag value" \
+            src/tests/smoke.ts >/dev/null 2>&1; then
+            echo "smoke accepted an invalid TEST_ID"
+            exit 1
+          fi
+
+          if k6 inspect \
+            src/tests/authenticated-smoke.ts >/dev/null 2>&1; then
+            echo "authenticated smoke ran without AUTH_SECRET_NAME"
+            exit 1
+          fi
+
+          if k6 inspect \
+            -e BASE_URL=https://example.invalid \
+            -e ENVIRONMENT=staging \
+            src/tests/average-load.ts >/dev/null 2>&1; then
+            echo "average-load ran without ALLOW_LOAD_TEST=true"
+            exit 1
+          fi
+
+          if k6 inspect \
+            -e BASE_URL=https://example.invalid \
+            -e ENVIRONMENT=production \
+            -e ALLOW_LOAD_TEST=true \
+            src/tests/stress.ts >/dev/null 2>&1; then
+            echo "production stress ran without ALLOW_PRODUCTION_LOAD=true"
+            exit 1
+          fi
