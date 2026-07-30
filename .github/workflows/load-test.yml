@@ -1,6 +1,69 @@
-name: Manual load test
+name: Performance gate
 
 on:
+  workflow_call:
+    inputs:
+      workload:
+        description: Workload profile
+        required: false
+        default: smoke
+        type: string
+      environment:
+        description: Target environment
+        required: false
+        default: staging
+        type: string
+      base_url:
+        description: Authorized HTTP or HTTPS target; prefer the TARGET_BASE_URL secret
+        required: false
+        type: string
+      test_id:
+        description: Stable identifier for this run
+        required: false
+        default: reusable
+        type: string
+      allow_production_load:
+        description: Explicitly allow stress or capacity against production
+        required: false
+        default: false
+        type: boolean
+      target_rps:
+        description: Iterations per second for the capacity profile
+        required: false
+        default: 5
+        type: number
+      pre_allocated_vus:
+        description: Pre-allocated VUs for the capacity profile
+        required: false
+        default: 5
+        type: number
+      max_vus:
+        description: Maximum VUs for the capacity profile
+        required: false
+        default: 20
+        type: number
+      baseline_path:
+        description: Optional relative path to a versioned baseline JSON
+        required: false
+        default: ''
+        type: string
+      openapi_path:
+        description: Optional relative path to an OpenAPI v3 JSON document
+        required: false
+        default: ''
+        type: string
+      minimum_openapi_coverage:
+        description: Minimum percentage of OpenAPI GET operations covered by test routes
+        required: false
+        default: 100
+        type: number
+    secrets:
+      TARGET_BASE_URL:
+        description: Authorized target URL, preferred over the base_url input
+        required: false
+      K6_OTEL_GRPC_EXPORTER_ENDPOINT:
+        description: Optional OpenTelemetry collector endpoint
+        required: false
   workflow_dispatch:
     inputs:
       workload:
@@ -11,6 +74,7 @@ on:
         options:
           - smoke
           - average-load
+          - capacity
           - stress
       environment:
         description: Target environment
@@ -30,10 +94,40 @@ on:
         default: manual
         type: string
       allow_production_load:
-        description: Explicitly allow stress against production
+        description: Explicitly allow stress or capacity against production
         required: true
         default: false
         type: boolean
+      target_rps:
+        description: Iterations per second for the capacity profile
+        required: true
+        default: 5
+        type: number
+      pre_allocated_vus:
+        description: Pre-allocated VUs for the capacity profile
+        required: true
+        default: 5
+        type: number
+      max_vus:
+        description: Maximum VUs for the capacity profile
+        required: true
+        default: 20
+        type: number
+      baseline_path:
+        description: Optional relative path to a versioned baseline JSON
+        required: false
+        default: ''
+        type: string
+      openapi_path:
+        description: Optional relative path to an OpenAPI v3 JSON document
+        required: false
+        default: ''
+        type: string
+      minimum_openapi_coverage:
+        description: Minimum percentage of OpenAPI GET operations covered by test routes
+        required: false
+        default: 100
+        type: number
 
 permissions:
   contents: read
@@ -73,13 +167,23 @@ jobs:
       - name: Run selected workload
         env:
           ALLOW_PRODUCTION_LOAD: ${{ inputs.allow_production_load }}
-          BASE_URL: ${{ inputs.base_url }}
+          BASE_URL: ${{ github.event_name == 'workflow_call' && secrets.TARGET_BASE_URL || inputs.base_url }}
+          BASELINE_PATH: ${{ inputs.baseline_path }}
           ENVIRONMENT: ${{ inputs.environment }}
           K6_OTEL_GRPC_EXPORTER_ENDPOINT: ${{ secrets.K6_OTEL_GRPC_EXPORTER_ENDPOINT }}
           K6_OTEL_GRPC_EXPORTER_INSECURE: ${{ vars.K6_OTEL_GRPC_EXPORTER_INSECURE || 'false' }}
           K6_OTEL_METRIC_PREFIX: k6_
           K6_OTEL_SERVICE_NAME: k6-continuous-performance
+          K6_WEB_DASHBOARD: 'true'
+          K6_WEB_DASHBOARD_EXPORT: results/report.html
+          K6_WEB_DASHBOARD_PORT: '-1'
+          K6_WEB_DASHBOARD_PERIOD: '100ms'
           TEST_ID: ${{ inputs.test_id }}
+          TARGET_RPS: ${{ inputs.target_rps }}
+          PRE_ALLOCATED_VUS: ${{ inputs.pre_allocated_vus }}
+          MAX_VUS: ${{ inputs.max_vus }}
+          MINIMUM_OPENAPI_COVERAGE: ${{ inputs.minimum_openapi_coverage }}
+          OPENAPI_PATH: ${{ inputs.openapi_path }}
           WORKLOAD: ${{ inputs.workload }}
         run: |
           case "$WORKLOAD" in
@@ -88,6 +192,9 @@ jobs:
               ;;
             average-load)
               script="src/tests/average-load.ts"
+              ;;
+            capacity)
+              script="src/tests/capacity.ts"
               ;;
             stress)
               script="src/tests/stress.ts"
@@ -98,8 +205,18 @@ jobs:
               ;;
           esac
 
-          if [[ "$WORKLOAD" == "stress" && "$ENVIRONMENT" == "production" && "$ALLOW_PRODUCTION_LOAD" != "true" ]]; then
-            echo "Production stress requires explicit approval."
+          if [[ ("$WORKLOAD" == "stress" || "$WORKLOAD" == "capacity") && "$ENVIRONMENT" == "production" && "$ALLOW_PRODUCTION_LOAD" != "true" ]]; then
+            echo "Production $WORKLOAD requires explicit approval."
+            exit 1
+          fi
+
+          if [[ -n "$BASELINE_PATH" && ("$BASELINE_PATH" == /* || "$BASELINE_PATH" == *".."* || "$BASELINE_PATH" != *.json) ]]; then
+            echo "baseline_path must be a relative JSON path without parent traversal."
+            exit 1
+          fi
+
+          if [[ -n "$OPENAPI_PATH" && ("$OPENAPI_PATH" == /* || "$OPENAPI_PATH" == *".."* || "$OPENAPI_PATH" != *.json) ]]; then
+            echo "openapi_path must be a relative JSON path without parent traversal."
             exit 1
           fi
 
@@ -110,20 +227,60 @@ jobs:
             outputs+=(--out opentelemetry)
           fi
 
+          k6_exit=0
           k6 run \
             "${outputs[@]}" \
             -e BASE_URL="$BASE_URL" \
             -e ENVIRONMENT="$ENVIRONMENT" \
             -e TEST_ID="$TEST_ID" \
+            -e TARGET_RPS="$TARGET_RPS" \
+            -e PRE_ALLOCATED_VUS="$PRE_ALLOCATED_VUS" \
+            -e MAX_VUS="$MAX_VUS" \
             -e ALLOW_LOAD_TEST=true \
             -e ALLOW_PRODUCTION_LOAD="$ALLOW_PRODUCTION_LOAD" \
-            "$script"
+            "$script" || k6_exit=$?
+
+          if [[ -f results/summary.json ]]; then
+            node scripts/render-summary.mjs results/summary.json results/summary.md
+            cat results/summary.md >> "$GITHUB_STEP_SUMMARY"
+            analysis_exit=0
+
+            if [[ -n "$BASELINE_PATH" ]]; then
+              node scripts/baseline.mjs \
+                compare \
+                results/summary.json \
+                "$BASELINE_PATH" \
+                results/regression.md || analysis_exit=1
+
+              if [[ -f results/regression.md ]]; then
+                cat results/regression.md >> "$GITHUB_STEP_SUMMARY"
+              fi
+            fi
+
+            if [[ -n "$OPENAPI_PATH" ]]; then
+              node scripts/openapi-coverage.mjs \
+                "$OPENAPI_PATH" \
+                src/data/routes.json \
+                results/openapi-coverage.md \
+                "$MINIMUM_OPENAPI_COVERAGE" || analysis_exit=1
+
+              if [[ -f results/openapi-coverage.md ]]; then
+                cat results/openapi-coverage.md >> "$GITHUB_STEP_SUMMARY"
+              fi
+            fi
+
+            if [[ "$analysis_exit" -ne 0 ]]; then
+              exit "$analysis_exit"
+            fi
+          fi
+
+          exit "$k6_exit"
 
       - name: Upload summary
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: k6-${{ inputs.workload }}-${{ github.run_id }}
-          path: results/summary.json
+          path: results/
           if-no-files-found: warn
           retention-days: 14

@@ -2,6 +2,9 @@
 
 Contributions are welcome when they keep the starter focused, safe by default and usable without proprietary infrastructure.
 
+Start with an item in [`ROADMAP.md`](ROADMAP.md) or open an issue describing a
+concrete user problem. Roadmap entries define intent, not an approved design.
+
 ## Development workflow
 
 1. Fork the repository and create a focused branch.
@@ -19,7 +22,7 @@ ENVIRONMENT=staging \
 npm run test:smoke
 ```
 
-Do not run average-load or stress merely to validate a contribution. `k6 inspect` and the existing CI checks cover their initialization without generating traffic.
+Do not run average-load, capacity or stress merely to validate a contribution. `k6 inspect` and the existing CI checks cover their initialization without generating traffic.
 
 ## Project conventions
 
@@ -43,7 +46,7 @@ Every workload that can generate meaningful traffic must:
 - document its expected load and intended environment;
 - avoid secrets and sensitive payloads in source, URLs, tags, logs and artifacts.
 
-Production stress must retain the second `ALLOW_PRODUCTION_LOAD=true` gate.
+Production capacity and stress must retain the second `ALLOW_PRODUCTION_LOAD=true` gate.
 
 ## Pull requests
 

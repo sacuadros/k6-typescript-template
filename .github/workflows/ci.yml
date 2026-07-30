@@ -55,6 +55,7 @@ jobs:
           fi
 
           if k6 inspect \
+            -e BASE_URL=https://example.invalid \
             src/tests/authenticated-smoke.ts >/dev/null 2>&1; then
             echo "authenticated smoke ran without AUTH_SECRET_NAME"
             exit 1
@@ -70,9 +71,50 @@ jobs:
 
           if k6 inspect \
             -e BASE_URL=https://example.invalid \
+            -e ENVIRONMENT=staging \
+            src/tests/capacity.ts >/dev/null 2>&1; then
+            echo "capacity ran without ALLOW_LOAD_TEST=true"
+            exit 1
+          fi
+
+          if k6 inspect \
+            -e BASE_URL=https://example.invalid \
+            -e ENVIRONMENT=production \
+            -e ALLOW_LOAD_TEST=true \
+            src/tests/capacity.ts >/dev/null 2>&1; then
+            echo "production capacity ran without ALLOW_PRODUCTION_LOAD=true"
+            exit 1
+          fi
+
+          if k6 inspect \
+            -e BASE_URL=https://example.invalid \
             -e ENVIRONMENT=production \
             -e ALLOW_LOAD_TEST=true \
             src/tests/stress.ts >/dev/null 2>&1; then
             echo "production stress ran without ALLOW_PRODUCTION_LOAD=true"
+            exit 1
+          fi
+
+          if k6 inspect \
+            recipes/graphql.ts >/dev/null 2>&1; then
+            echo "GraphQL recipe ran without an explicit BASE_URL"
+            exit 1
+          fi
+
+          if k6 inspect \
+            -e BASE_URL=http://api.example.invalid/protected \
+            -e TOKEN_URL=http://auth.example.invalid/oauth/token \
+            -e OAUTH_CLIENT_ID_SECRET=oauth-client-id \
+            -e OAUTH_CLIENT_SECRET_SECRET=oauth-client-secret \
+            recipes/oauth-client-credentials.ts >/dev/null 2>&1; then
+            echo "OAuth recipe accepted credentials over remote HTTP"
+            exit 1
+          fi
+
+          if k6 inspect \
+            -e BASE_URL=https://api.example.invalid \
+            -e UPLOAD_EXPECTED_STATUS=999 \
+            recipes/file-upload.ts >/dev/null 2>&1; then
+            echo "file upload accepted an invalid expected status"
             exit 1
           fi

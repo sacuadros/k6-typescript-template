@@ -23,9 +23,10 @@ export function preflightTarget(config: TestConfig): void {
   }
 }
 
-export function visitTarget(config: TestConfig): void {
+export function visitTarget(config: TestConfig, thinkTimeSeconds = 1): void {
   const route = routeForIteration();
   const response = http.get(`${config.baseUrl}${route.path}`, {
+    responseCallback: http.expectedStatuses(route.expectedStatus),
     tags: {
       name: route.name,
       scenario: 'target-availability',
@@ -33,9 +34,11 @@ export function visitTarget(config: TestConfig): void {
   });
 
   check(response, {
-    'target responds successfully': (result) =>
-      responseIsSuccessful(result.status),
+    [`${route.name} returns ${route.expectedStatus}`]: (result) =>
+      result.status === route.expectedStatus,
   });
 
-  sleep(1);
+  if (thinkTimeSeconds > 0) {
+    sleep(thinkTimeSeconds);
+  }
 }

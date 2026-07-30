@@ -1,6 +1,12 @@
 [
   {
+    "expectedStatus": 200,
+    "maxErrorRate": 0.01,
+    "method": "GET",
     "name": "GET root",
-    "path": "/"
+    "operationId": "getRoot",
+    "path": "/",
+    "p95Ms": 500,
+    "weight": 1
   }
 ]
