@@ -1,72 +1,62 @@
+# k6 TypeScript Template
 
-# k6 TypeScript Test Generator
+[![CI](https://github.com/sacuadros/k6-typescript-template/actions/workflows/ci.yml/badge.svg)](https://github.com/sacuadros/k6-typescript-template/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-This project streamlines the creation of performance tests using k6, enhanced by the power of TypeScript for a more efficient and safer development experience.
+A minimal starter for writing type-checked [k6](https://grafana.com/docs/k6/latest/) load tests in TypeScript. k6 runs TypeScript directly, so this template does not need a custom bundler or test runner.
 
-## Features
+## Prerequisites
 
-- **TypeScript for k6 Tests**: Leverage TypeScript to write your k6 tests, enabling type safety and code efficiency.
-- **Esbuild Compilation**: Utilizes esbuild for quick compilation of TypeScript to JavaScript.
-- **Preconfigured Project Structure**: Start quickly with a well-organized structure and predefined configurations.
+- [Node.js](https://nodejs.org/) 20 or newer
+- npm
+- [k6](https://grafana.com/docs/k6/latest/set-up/install-k6/) installed locally
 
-## Installation
-
-To set up the project locally, follow these steps:
+## Quick start
 
 ```bash
-git clone git@github.com:sacuadros/k6-typescript-template.git
+git clone https://github.com/sacuadros/k6-typescript-template.git
 cd k6-typescript-template
-npm install
+npm ci
+npm run check
+npm run test:smoke
 ```
 
-## Usage
-
-### Test Development
-
-Develop your tests in the `services/` directory using TypeScript. Before running any tests, compile your TypeScript files to JavaScript:
+The smoke test targets Grafana's public k6 test site by default. To use a system you are authorized to test:
 
 ```bash
-npm run build
+k6 run -e BASE_URL=https://your-test-system.example src/smoke.ts
 ```
 
-### Running Tests
+## Project structure
 
-To run the tests, compile your TypeScript test scripts first. After compilation, you have two options:
-
-1. **Dropdown for Test Selection**:
-
-   Run the following command without arguments to get a dropdown list of available services and projects:
-
-   ```bash
-   npm run test
-   ```
-
-   Follow the console instructions to select the specific service and project for which you wish to run tests.
-
-2. **Direct Test Execution**:
-
-   If you know which test you want to run, specify the service and test script directly:
-
-   ```bash
-   npm run test <service> <script>
-   ```
-
-### Example
-
-To run a specific test script from a service:
-
-```bash
-npm run test myService myTestScript.js
+```text
+src/
+└── smoke.ts          # Small runnable example
+.github/workflows/
+└── ci.yml            # Formatting, types, and k6 inspection
 ```
 
-## Templates
+Create another test by copying `src/smoke.ts`, then import k6 modules directly. Keep local imports relative and fully specified so k6 can resolve them.
 
-For guidance on creating your tests, refer to the `templates` service, which contains template guides for various test scenarios.
+## Commands
 
-## K6 Examples
+| Command                | Purpose                                      |
+| ---------------------- | -------------------------------------------- |
+| `npm run check`        | Run every non-destructive project check      |
+| `npm run format`       | Format tracked project files                 |
+| `npm run format:check` | Verify formatting without changing files     |
+| `npm run typecheck`    | Run strict TypeScript checking               |
+| `npm run test:inspect` | Validate the k6 script without sending HTTP  |
+| `npm run test:smoke`   | Execute one iteration against the target URL |
 
-[Ejemplos en la documentación oficial](https://k6.io/docs/examples/)
+## Responsible use
 
-## Papa Parse CSV parser
+Load tests can disrupt systems. Run them only against infrastructure you own or have explicit permission to test. Start with a small scenario and increase load intentionally.
 
-[Documentación oficial](https://www.papaparse.com/docs)
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Security reports should follow [SECURITY.md](SECURITY.md).
+
+## License
+
+Licensed under the [Apache License 2.0](LICENSE).

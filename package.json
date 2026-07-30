@@ -1,31 +1,35 @@
 {
-  "name": "k6-typescript",
+  "name": "k6-typescript-template",
   "version": "1.0.0",
-  "repository": "https://github.com/sacuadros/k6-typescript-template",
-  "author": "sergio cuadros",
-  "license": "MIT",
-  "type": "module",
-  "devDependencies": {
-    "@types/inquirer": "^9.0.7",
-    "@types/dotenv": "^8.2.0",
-    "@types/node": "^20.11.19",
-    "@typescript-eslint/eslint-plugin": "^7.0.1",
-    "@typescript-eslint/parser": "^7.0.1",
-    "esbuild": "^0.20.0",
-    "esbuild-plugin-copy": "^2.1.1",
-    "eslint": "^8.56.0",
-    "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-import": "^2.29.1",
-    "eslint-plugin-prettier": "^5.1.3",
-    "prettier": "^3.2.5"
+  "private": true,
+  "description": "Minimal TypeScript starter for reliable k6 load tests.",
+  "license": "Apache-2.0",
+  "author": "Sergio Cuadros",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sacuadros/k6-typescript-template.git"
+  },
+  "keywords": [
+    "k6",
+    "load-testing",
+    "performance-testing",
+    "typescript"
+  ],
+  "engines": {
+    "node": ">=20"
   },
   "scripts": {
-    "build": "node esbuild.config.js",
-    "test": "node dist/main.js"
+    "check": "npm run format:check && npm run typecheck && npm run test:inspect",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "test": "npm run check",
+    "test:inspect": "k6 inspect src/smoke.ts",
+    "test:smoke": "k6 run src/smoke.ts",
+    "typecheck": "tsc --noEmit"
   },
-  "dependencies": {
-  
-    "dotenv": "^16.4.5",
-    "inquirer": "^9.2.14"
+  "devDependencies": {
+    "@types/k6": "2.0.1",
+    "prettier": "3.9.6",
+    "typescript": "7.0.2"
   }
 }
