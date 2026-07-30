@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - development
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Set up k6
+        uses: grafana/setup-k6-action@db07bd9765aac508ef18982e52ab937fe633a065 # v1.2.1
+        with:
+          k6-version: 2.1.0
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run checks
+        run: npm run check
+
+      - name: Verify load profiles fail closed
+        run: |
+          if k6 inspect \
+            -e BASE_URL=ftp://example.invalid \
+            src/tests/smoke.ts >/dev/null 2>&1; then
+            echo "smoke accepted a non-HTTP target"
+            exit 1
+          fi
+
+          if k6 inspect \
+            -e TEST_ID="unbounded tag value" \
+            src/tests/smoke.ts >/dev/null 2>&1; then
+            echo "smoke accepted an invalid TEST_ID"
+            exit 1
+          fi
+
+          if k6 inspect \
+            src/tests/authenticated-smoke.ts >/dev/null 2>&1; then
+            echo "authenticated smoke ran without AUTH_SECRET_NAME"
+            exit 1
+          fi
+
+          if k6 inspect \
+            -e BASE_URL=https://example.invalid \
+            -e ENVIRONMENT=staging \
+            src/tests/average-load.ts >/dev/null 2>&1; then
+            echo "average-load ran without ALLOW_LOAD_TEST=true"
+            exit 1
+          fi
+
+          if k6 inspect \
+            -e BASE_URL=https://example.invalid \
+            -e ENVIRONMENT=production \
+            -e ALLOW_LOAD_TEST=true \
+            src/tests/stress.ts >/dev/null 2>&1; then
+            echo "production stress ran without ALLOW_PRODUCTION_LOAD=true"
+            exit 1
+          fi

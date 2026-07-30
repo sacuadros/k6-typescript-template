@@ -1,0 +1,81 @@
+name: Scheduled smoke
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 8 * * 1-5'
+      timezone: America/Bogota
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scheduled-smoke
+  cancel-in-progress: false
+
+jobs:
+  run:
+    if: ${{ vars.SCHEDULED_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Set up k6
+        uses: grafana/setup-k6-action@db07bd9765aac508ef18982e52ab937fe633a065 # v1.2.1
+        with:
+          k6-version: 2.1.0
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate suite
+        run: npm run check
+
+      - name: Run scheduled smoke
+        env:
+          BASE_URL: ${{ secrets.SCHEDULED_BASE_URL }}
+          ENVIRONMENT: ${{ vars.SCHEDULED_ENVIRONMENT || 'staging' }}
+          K6_OTEL_GRPC_EXPORTER_ENDPOINT: ${{ secrets.K6_OTEL_GRPC_EXPORTER_ENDPOINT }}
+          K6_OTEL_GRPC_EXPORTER_INSECURE: ${{ vars.K6_OTEL_GRPC_EXPORTER_INSECURE || 'false' }}
+          K6_OTEL_METRIC_PREFIX: k6_
+          K6_OTEL_SERVICE_NAME: k6-continuous-performance
+          TEST_ID: scheduled-${{ github.run_id }}
+        run: |
+          if [[ -z "$BASE_URL" ]]; then
+            echo "SCHEDULED_BASE_URL is required when SCHEDULED_ENABLED=true."
+            exit 1
+          fi
+
+          mkdir -p results
+          outputs=(--summary-export results/summary.json)
+
+          if [[ -n "$K6_OTEL_GRPC_EXPORTER_ENDPOINT" ]]; then
+            outputs+=(--out opentelemetry)
+          fi
+
+          k6 run \
+            "${outputs[@]}" \
+            -e BASE_URL="$BASE_URL" \
+            -e ENVIRONMENT="$ENVIRONMENT" \
+            -e TEST_ID="$TEST_ID" \
+            src/tests/smoke.ts
+
+      - name: Upload summary
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: scheduled-smoke-${{ github.run_id }}
+          path: results/summary.json
+          if-no-files-found: warn
+          retention-days: 14
