@@ -19,6 +19,7 @@ export async function visitAuthenticatedTarget(
       headers: {
         Authorization: `Bearer ${token}`,
       },
+      responseCallback: http.expectedStatuses(route.expectedStatus),
       tags: {
         name: route.name,
         scenario: 'authenticated-target',
@@ -27,8 +28,8 @@ export async function visitAuthenticatedTarget(
   );
 
   check(response, {
-    'authenticated target responds successfully': (result) =>
-      result.status >= 200 && result.status < 400,
+    [`${route.name} returns ${route.expectedStatus}`]: (result) =>
+      result.status === route.expectedStatus,
   });
 
   sleep(1);

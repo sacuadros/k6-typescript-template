@@ -2,7 +2,7 @@ import { loadConfig } from '../config.ts';
 import { optionsFor } from '../profiles.ts';
 import { visitAuthenticatedTarget } from '../scenarios/authenticated-target.ts';
 
-const config = loadConfig('smoke');
+const config = loadConfig('smoke', true);
 const secretName = __ENV.AUTH_SECRET_NAME?.trim();
 
 if (!secretName) {

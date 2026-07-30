@@ -22,12 +22,17 @@ function readEnvironment(): Environment {
   return value as Environment;
 }
 
-export function loadConfig(workload: Workload): TestConfig {
+export function loadConfig(
+  workload: Workload,
+  requireExplicitBaseUrl = false,
+): TestConfig {
   const environment = readEnvironment();
   const configuredBaseUrl = __ENV.BASE_URL?.trim();
   const baseUrl =
     configuredBaseUrl ||
-    (workload === 'smoke' ? 'https://test.k6.io' : undefined);
+    (!requireExplicitBaseUrl && workload === 'smoke'
+      ? 'https://test.k6.io'
+      : undefined);
 
   if (!baseUrl) {
     throw new Error(`${workload} requires an explicit BASE_URL.`);
@@ -52,12 +57,12 @@ export function loadConfig(workload: Workload): TestConfig {
   }
 
   if (
-    workload === 'stress' &&
+    (workload === 'stress' || workload === 'capacity') &&
     environment === 'production' &&
     __ENV.ALLOW_PRODUCTION_LOAD !== 'true'
   ) {
     throw new Error(
-      'Stress testing production is blocked. Set ALLOW_PRODUCTION_LOAD=true only with explicit authorization.',
+      `${workload} against production is blocked. Set ALLOW_PRODUCTION_LOAD=true only with explicit authorization.`,
     );
   }
 

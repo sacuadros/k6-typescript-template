@@ -26,7 +26,7 @@ Do not include live credentials, private target URLs, personal data or unrelated
 
 - Run tests only against systems you own or have explicit permission to test.
 - Keep load profiles fail-closed.
-- Do not remove the additional production-stress authorization gate.
+- Do not remove the additional production capacity/stress authorization gate.
 - Treat workflow inputs and repository variables as visible configuration, not secret storage.
 
 ### Secrets

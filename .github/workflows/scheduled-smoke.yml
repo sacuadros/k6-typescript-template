@@ -50,7 +50,12 @@ jobs:
           K6_OTEL_GRPC_EXPORTER_INSECURE: ${{ vars.K6_OTEL_GRPC_EXPORTER_INSECURE || 'false' }}
           K6_OTEL_METRIC_PREFIX: k6_
           K6_OTEL_SERVICE_NAME: k6-continuous-performance
+          K6_WEB_DASHBOARD: 'true'
+          K6_WEB_DASHBOARD_EXPORT: results/report.html
+          K6_WEB_DASHBOARD_PORT: '-1'
+          K6_WEB_DASHBOARD_PERIOD: '100ms'
           TEST_ID: scheduled-${{ github.run_id }}
+          WORKLOAD: smoke
         run: |
           if [[ -z "$BASE_URL" ]]; then
             echo "SCHEDULED_BASE_URL is required when SCHEDULED_ENABLED=true."
@@ -64,18 +69,26 @@ jobs:
             outputs+=(--out opentelemetry)
           fi
 
+          k6_exit=0
           k6 run \
             "${outputs[@]}" \
             -e BASE_URL="$BASE_URL" \
             -e ENVIRONMENT="$ENVIRONMENT" \
             -e TEST_ID="$TEST_ID" \
-            src/tests/smoke.ts
+            src/tests/smoke.ts || k6_exit=$?
+
+          if [[ -f results/summary.json ]]; then
+            node scripts/render-summary.mjs results/summary.json results/summary.md
+            cat results/summary.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          exit "$k6_exit"
 
       - name: Upload summary
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: scheduled-smoke-${{ github.run_id }}
-          path: results/summary.json
+          path: results/
           if-no-files-found: warn
           retention-days: 14

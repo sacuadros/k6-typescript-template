@@ -1,6 +1,6 @@
 {
   "name": "k6-typescript-template",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "description": "Opinionated starter for safe, continuous API performance testing with k6.",
   "license": "Apache-2.0",
@@ -22,12 +22,22 @@
     "node": ">=20"
   },
   "scripts": {
-    "check": "npm run format:check && npm run typecheck && npm run test:inspect",
+    "check": "npm run format:check && npm run typecheck && npm run test:report && npm run test:baseline && npm run test:openapi && npm run test:routes && npm run test:demo && npm run test:inspect && npm run recipes:inspect",
+    "demo": "node scripts/run-demo.mjs pass",
+    "demo:fail": "node scripts/run-demo.mjs slow",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
+    "openapi:coverage": "node scripts/openapi-coverage.mjs examples/openapi.json src/data/routes.json results/openapi-coverage.md 100",
+    "recipes:inspect": "k6 inspect -e BASE_URL=https://api.example.invalid/protected -e TOKEN_URL=https://auth.example.invalid/oauth/token -e OAUTH_CLIENT_ID_SECRET=oauth-client-id -e OAUTH_CLIENT_SECRET_SECRET=oauth-client-secret recipes/oauth-client-credentials.ts && k6 inspect -e BASE_URL=https://api.example.invalid recipes/graphql.ts && k6 inspect -e BASE_URL=https://api.example.invalid recipes/file-upload.ts",
     "test": "npm run check",
     "test:average-load": "k6 run src/tests/average-load.ts",
-    "test:inspect": "k6 inspect src/tests/smoke.ts && k6 inspect -e AUTH_SECRET_NAME=auth-token src/tests/authenticated-smoke.ts && k6 inspect -e BASE_URL=https://example.invalid -e ENVIRONMENT=staging -e ALLOW_LOAD_TEST=true src/tests/average-load.ts && k6 inspect -e BASE_URL=https://example.invalid -e ENVIRONMENT=staging -e ALLOW_LOAD_TEST=true src/tests/stress.ts",
+    "test:baseline": "node --test scripts/baseline.test.mjs",
+    "test:capacity": "k6 run src/tests/capacity.ts",
+    "test:demo": "npm run demo && npm run demo:fail",
+    "test:inspect": "k6 inspect src/tests/smoke.ts && k6 inspect -e BASE_URL=https://example.invalid -e AUTH_SECRET_NAME=auth-token src/tests/authenticated-smoke.ts && k6 inspect -e BASE_URL=https://example.invalid -e ENVIRONMENT=staging -e ALLOW_LOAD_TEST=true src/tests/average-load.ts && k6 inspect -e BASE_URL=https://example.invalid -e ENVIRONMENT=staging -e ALLOW_LOAD_TEST=true src/tests/capacity.ts && k6 inspect -e BASE_URL=https://example.invalid -e ENVIRONMENT=staging -e ALLOW_LOAD_TEST=true src/tests/stress.ts",
+    "test:openapi": "node --test scripts/openapi-coverage.test.mjs",
+    "test:report": "node --test scripts/render-summary.test.mjs",
+    "test:routes": "k6 run --quiet src/tests/routes-contract.ts",
     "test:smoke": "k6 run src/tests/smoke.ts",
     "test:stress": "k6 run src/tests/stress.ts",
     "typecheck": "tsc --noEmit"
